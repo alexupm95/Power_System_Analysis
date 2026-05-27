@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Power Flow · PSA Module T03</title>
+<style>
+:root{--paper:#f6f2ea;--paper2:#eee9dc;--ink:#1a1812;--ink-soft:#5c5648;--ink-faint:#9b9488;--blue:#1446cc;--blue-lt:#d6e0ff;--amber:#d97706;--amber-lt:#fef3c7;--rule:#d8d0c0;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:Arial,Calibri,sans-serif;font-size:15px;line-height:1.6}
+.page-header{background:var(--paper2);border-bottom:2px solid var(--rule);padding:1.3rem 2rem}
+.module-tag{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:.2rem}
+h1{font-size:1.5rem;font-weight:700;margin-bottom:.2rem}
+.page-sub{font-size:.88rem;color:var(--ink-soft)}
+.shell{display:grid;grid-template-columns:290px 1fr;min-height:calc(100vh - 90px)}
+.left{background:var(--paper2);border-right:1px solid var(--rule);padding:1rem;overflow-y:auto}
+.right{padding:1rem;overflow-y:auto}
+.preset-row{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:1rem}
+.pb{padding:.28rem .65rem;font-size:.76rem;font-weight:600;border:1px solid var(--rule);border-radius:20px;background:white;color:var(--ink-soft);cursor:pointer;transition:.15s}
+.pb:hover,.pb.active{background:var(--blue);color:white;border-color:var(--blue)}
+.grp{margin-bottom:.9rem}
+.grp-title{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:.4rem;padding-bottom:.15rem;border-bottom:1px solid var(--rule)}
+.sr{margin-bottom:.5rem}
+.sl{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:.12rem}
+.sn{color:var(--ink-soft)}
+.sv{font-family:'Courier New',monospace;font-weight:700;color:var(--blue);font-size:.82rem}
+input[type=range]{width:100%;height:5px;accent-color:var(--blue);cursor:pointer}
+input[type=range]:disabled{accent-color:#ccc;opacity:.5;cursor:not-allowed}
+.rg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.8rem}
+.rc{background:white;border:1px solid var(--rule);border-left:4px solid var(--blue);border-radius:4px;padding:.45rem .7rem}
+.rc.loss{border-left-color:var(--amber);background:var(--amber-lt)}
+.rc.rev{border-left-color:#9b9488}
+.rl{font-size:.7rem;color:var(--ink-soft);margin-bottom:.1rem}
+.rv{font-family:'Courier New',monospace;font-size:1rem;font-weight:700}
+.ru{font-size:.7rem;color:var(--ink-faint)}
+.dw{background:white;border:1px solid var(--rule);border-radius:6px;padding:.7rem;margin-bottom:.8rem}
+.dw h3{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:.5rem}
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.cw{background:white;border:1px solid var(--rule);border-radius:6px;padding:.7rem}
+.cw h3{font-size:.73rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-bottom:.4rem}
+canvas{width:100%!important;display:block}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <div class="module-tag">Power Flow Analysis — Module T03L01M01 · Interactive</div>
+  <h1>Power Flow Explorer</h1>
+  <p class="page-sub">Adjust branch parameters and observe active and reactive power in real time.</p>
+</div>
+
+<div class="shell">
+<div class="left">
+  <div class="preset-row">
+    <button class="pb active" id="pb_line" onclick="setPreset('line')">Transmission Line</button>
+    <button class="pb" id="pb_xfmr" onclick="setPreset('xfmr')">Transformer</button>
+  </div>
+
+  <div class="grp">
+    <div class="grp-title">Bus Voltages (pu)</div>
+    <div class="sr"><div class="sl"><span class="sn">V<sub>k</sub></span><span class="sv" id="lVk">1.050</span></div><input type="range" id="sVk" min="0.80" max="1.20" step="0.005" value="1.05" oninput="update()"></div>
+    <div class="sr"><div class="sl"><span class="sn">V<sub>m</sub></span><span class="sv" id="lVm">1.000</span></div><input type="range" id="sVm" min="0.80" max="1.20" step="0.005" value="1.00" oninput="update()"></div>
+  </div>
+
+  <div class="grp">
+    <div class="grp-title">Voltage Angles (degrees)</div>
+    <div class="sr"><div class="sl"><span class="sn">θ<sub>k</sub></span><span class="sv" id="lTk">20.0°</span></div><input type="range" id="sTk" min="-45" max="45" step="0.5" value="20" oninput="update()"></div>
+    <div class="sr"><div class="sl"><span class="sn">θ<sub>m</sub></span><span class="sv" id="lTm">0.0°</span></div><input type="range" id="sTm" min="-45" max="45" step="0.5" value="0" oninput="update()"></div>
+  </div>
+
+  <div class="grp">
+    <div class="grp-title">Series Impedance (pu)</div>
+    <div class="sr"><div class="sl"><span class="sn">r<sub>km</sub></span><span class="sv" id="lr">0.020</span></div><input type="range" id="sr_" min="0.00" max="0.20" step="0.002" value="0.02" oninput="update()"></div>
+    <div class="sr"><div class="sl"><span class="sn">x<sub>km</sub></span><span class="sv" id="lx">0.100</span></div><input type="range" id="sx" min="0.01" max="0.50" step="0.005" value="0.10" oninput="update()"></div>
+    <div class="sr"><div class="sl"><span class="sn">b<sup>sh</sup><sub>km</sub></span><span class="sv" id="lbsh">0.010</span></div><input type="range" id="sbsh" min="0.00" max="0.10" step="0.001" value="0.01" oninput="update()"></div>
+  </div>
+
+  <div class="grp">
+    <div class="grp-title">Transformer Parameters</div>
+    <div class="sr"><div class="sl"><span class="sn">a<sub>km</sub> (tap ratio)</span><span class="sv" id="la">1.000</span></div><input type="range" id="sa" min="0.80" max="1.20" step="0.005" value="1.00" oninput="update()"></div>
+    <div class="sr"><div class="sl"><span class="sn">φ (phase shift)</span><span class="sv" id="lphi">0.0°</span></div><input type="range" id="sphi" min="-30" max="30" step="0.5" value="0" oninput="update()"></div>
+  </div>
+</div>
+
+<div class="right">
+  <div class="rg">
+    <div class="rc"><div class="rl">P<sub>km</sub> (from k)</div><div class="rv" id="rPkm">—</div><div class="ru">pu</div></div>
+    <div class="rc"><div class="rl">Q<sub>km</sub> (from k)</div><div class="rv" id="rQkm">—</div><div class="ru">pu</div></div>
+    <div class="rc loss"><div class="rl">P losses</div><div class="rv" id="rPl">—</div><div class="ru">pu</div></div>
+    <div class="rc rev"><div class="rl">P<sub>mk</sub> (from m)</div><div class="rv" id="rPmk">—</div><div class="ru">pu</div></div>
+    <div class="rc rev"><div class="rl">Q<sub>mk</sub> (from m)</div><div class="rv" id="rQmk">—</div><div class="ru">pu</div></div>
+    <div class="rc loss"><div class="rl">Q losses</div><div class="rv" id="rQl">—</div><div class="ru">pu</div></div>
+  </div>
+
+  <div class="dw">
+    <h3>Branch Circuit</h3>
+    <svg id="circ" viewBox="0 0 620 215" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+      <defs>
+        <marker id="ab" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#1446cc"/></marker>
+        <marker id="ap" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#7c3aed"/></marker>
+        <marker id="abr" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0,0 3,8 6" fill="#1446cc"/></marker>
+        <marker id="apr" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto"><polygon points="8 0,0 3,8 6" fill="#7c3aed"/></marker>
+      </defs>
+      <!-- Bus k -->
+      <rect x="20" y="55" width="13" height="105" fill="#1a1812"/>
+      <text x="26" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#000000">k</text>
+      <!-- Bus m -->
+      <rect x="587" y="55" width="13" height="105" fill="#1a1812"/>
+      <text x="593" y="44" text-anchor="middle" font-size="13" font-weight="700" fill="#000000">m</text>
+      <!-- Wire -->
+      <line id="line_k" x1="33" y1="107" x2="248" y2="107" stroke="#333" stroke-width="2"/>
+      <g id="branchElement"></g>
+      <line x1="372" y1="107" x2="587" y2="107" stroke="#333" stroke-width="2"/>
+      <!-- Impedance box -->
+      <!-- <rect x="198" y="93" width="224" height="28" fill="white" stroke="#444" stroke-width="1.5" rx="3"/> -->
+      <rect x="248" y="93" width="124" height="28" fill="white" stroke="#444" stroke-width="1.5" rx="3"/>
+
+      <text x="310" y="112" text-anchor="middle" font-size="11" fill="#666" font-family="Georgia,serif"><tspan font-style="italic">z</tspan><tspan dy="4" font-size="8" font-style="italic">km</tspan><tspan dy="-4" font-style="normal"> = </tspan><tspan font-style="italic">r</tspan><tspan dy="4" font-size="8" font-style="italic">km</tspan><tspan dy="-4" font-style="normal"> + </tspan><tspan font-style="italic">jx</tspan><tspan dy="4" font-size="8" font-style="italic">km</tspan></text>
+      <!-- Junction dots -->
+      <circle cx="248" cy="107" r="3" fill="#333"/>
+      <circle cx="372" cy="107" r="3" fill="#333"/>
+      <!-- Left shunt (hidden for transformer modes via shuntGrpK) -->
+      <g id="shuntGrpK">
+        <circle cx="140" cy="107" r="3" fill="#333"/>
+        <line x1="140" y1="107" x2="140" y2="138" stroke="#444" stroke-width="1.5"/>
+        <rect x="130" y="138" width="20" height="34" fill="white" stroke="#444" stroke-width="1.5" rx="2"/>
+        <!-- jb_km^sh label: base + superscript + subscript, placed to the left of the rect -->
+        <text x="116" y="157" text-anchor="end" font-size="10" fill="#666" font-family="Georgia,serif" font-style="italic">jb</text>
+        <text x="116" y="152" text-anchor="start" font-size="7"  fill="#666" font-family="Georgia,serif" font-style="italic">sh</text>
+        <text x="116" y="164" text-anchor="start" font-size="7"  fill="#666" font-family="Georgia,serif" font-style="italic">km</text>
+        <line x1="140" y1="172" x2="140" y2="180" stroke="#444" stroke-width="1.5"/>
+        <line x1="130" y1="180" x2="150" y2="180" stroke="#444" stroke-width="2.5"/>
+        <line x1="133" y1="185" x2="147" y2="185" stroke="#444" stroke-width="2"/>
+        <line x1="136" y1="190" x2="144" y2="190" stroke="#444" stroke-width="1.5"/>
+      </g>
+      <!-- Right shunt (hidden for transformer modes via shuntGrpM) -->
+      <g id="shuntGrpM">
+        <circle cx="480" cy="107" r="3" fill="#333"/>
+        <line x1="480" y1="107" x2="480" y2="138" stroke="#444" stroke-width="1.5"/>
+        <rect x="470" y="138" width="20" height="34" fill="white" stroke="#444" stroke-width="1.5" rx="2"/>
+        <!-- jb_km^sh label: base + superscript + subscript, placed to the left of the rect -->
+        <text x="456" y="157" text-anchor="end" font-size="10" fill="#666" font-family="Georgia,serif" font-style="italic">jb</text>
+        <text x="456" y="152" text-anchor="start" font-size="7"  fill="#666" font-family="Georgia,serif" font-style="italic">sh</text>
+        <text x="456" y="164" text-anchor="start" font-size="7"  fill="#666" font-family="Georgia,serif" font-style="italic">km</text>
+        <line x1="480" y1="172" x2="480" y2="180" stroke="#444" stroke-width="1.5"/>
+        <line x1="470" y1="180" x2="490" y2="180" stroke="#444" stroke-width="2.5"/>
+        <line x1="473" y1="185" x2="487" y2="185" stroke="#444" stroke-width="2"/>
+        <line x1="476" y1="190" x2="484" y2="190" stroke="#444" stroke-width="1.5"/>
+      </g>
+      <!-- Left shunt Q^sh arrow — vertical, reuses #ap (orient=auto rotates for direction) -->
+      <line id="sha_k" x1="155" y1="138" x2="155" y2="171" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ap)"/>
+      <text id="sha_k_lbl" x="165" y="170" font-size="9" fill="#7c3aed" font-family="Georgia,serif"></text>
+      <!-- Right shunt Q^sh arrow -->
+      <line id="sha_m" x1="495" y1="138" x2="495" y2="171" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ap)"/>
+      <text id="sha_m_lbl" x="505" y="170" text-anchor="start" font-size="9" fill="#7c3aed" font-family="Georgia,serif"></text>
+      <!-- P flow: Pkm small arrow k→m (LHS) · Pmk small arrow m→k (RHS) — fixed direction -->
+      <line id="pa_k" x1="37" y1="62" x2="77" y2="62" stroke="#1446cc" stroke-width="2" marker-end="url(#ab)"/>
+      <line id="pa_m" x1="583" y1="62" x2="543" y2="62" stroke="#1446cc" stroke-width="2" marker-end="url(#ab)"/>
+      <text id="plk" x="37" y="52" font-size="9" fill="#1446cc" font-family="Courier New,monospace" font-weight="700"></text>
+      <text id="plm" x="583" y="52" text-anchor="end" font-size="9" fill="#1446cc" font-family="Courier New,monospace" font-weight="700"></text>
+      <!-- Q flow: Qkm small arrow k→m (LHS) · Qmk small arrow m→k (RHS) — fixed direction -->
+      <line id="qa_k" x1="37" y1="95" x2="77" y2="95" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ap)"/>
+      <line id="qa_m" x1="583" y1="95" x2="543" y2="95" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ap)"/>
+      <text id="qlk" x="37" y="85" font-size="9" fill="#7c3aed" font-family="Courier New,monospace"></text>
+      <text id="qlm" x="583" y="85" text-anchor="end" font-size="9" fill="#7c3aed" font-family="Courier New,monospace"></text>
+      <!-- Voltage labels -->
+      <text id="vkl" x="46" y="210" text-anchor="middle" font-size="9.5" fill="#5c5648" font-family="Courier New,monospace"></text>
+      <text id="vml" x="573" y="210" text-anchor="middle" font-size="9.5" fill="#5c5648" font-family="Courier New,monospace"></text>
+    </svg>
+  </div>
+
+  <!-- Series admittance derived values -->
+  <div class="rg" style="margin-bottom:.8rem">
+    <div class="rc" style="border-left-color:#59a14f">
+      <div class="rl">g<sub>km</sub> — Series conductance</div>
+      <div class="rv" id="rGkm">—</div>
+      <div class="ru">p.u.</div>
+    </div>
+    <div class="rc" style="border-left-color:#59a14f">
+      <div class="rl">b<sub>km</sub> — Series susceptance</div>
+      <div class="rv" id="rBkm">—</div>
+      <div class="ru">p.u.</div>
+    </div>
+    <div class="rc" style="border-left-color:#59a14f">
+      <div class="rl">b<sup>sh</sup><sub>km</sub> — Shunt susceptance</div>
+      <div class="rv" id="rBshkm">—</div>
+      <div class="ru">p.u.</div>
+    </div>
+  </div>
+
+  <div class="cr">
+    <div class="cw"><h3>P vs. Angular Difference</h3><canvas id="cvP" height="150"></canvas></div>
+    <div class="cw"><h3>Power Summary</h3>
+      <div style="display:grid;grid-template-columns:1fr;gap:5px">
+        <canvas id="cvB1" height="90"></canvas>
+        <canvas id="cvB2" height="90"></canvas>
+        <canvas id="cvB3" height="90"></canvas>
+        <canvas id="cvB4" height="90"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+var S={Vk:1.05,Vm:1.0,Tk:20,Tm:0,r:0.02,x:0.10,bsh:0.01,a:1.0,phi:0,mode:'line'};
+
+function calc(Vk,Vm,Tk,Tm,r,x,bsh,a,phi){
+  var d=r*r+x*x, g=r/d, b=-x/d;
+  var tkm=(Tk-Tm)*Math.PI/180, tmk=(Tm-Tk)*Math.PI/180, p=phi*Math.PI/180;
+  var aVk=a*Vk, al=tkm+p;
+  var Pkm=aVk*aVk*g - aVk*Vm*g*Math.cos(tkm+p) - aVk*Vm*b*Math.sin(tkm+p);
+  var Qkm=-aVk*aVk*(b+bsh) + aVk*Vm*b*Math.cos(tkm+p) - aVk*Vm*g*Math.sin(tkm+p);
+  var Pmk=Vm*Vm*g - aVk*Vm*g*Math.cos(tmk-p) - aVk*Vm*b*Math.sin(tmk-p);
+  var Qmk=-Vm*Vm*(b+bsh) + aVk*Vm*b*Math.cos(tmk-p) - aVk*Vm*g*Math.sin(tmk-p);
+  return {Pkm:Pkm,Qkm:Qkm,Pmk:Pmk,Qmk:Qmk,Pl:Pkm+Pmk,Ql:Qkm+Qmk};
+}
+
+function f3(v){return (v>=0?'+':'')+v.toFixed(3);}
+function f4(v){return (v>=0?'+':'')+v.toFixed(4);}
+
+function setEl(id,txt){document.getElementById(id).textContent=txt;}
+
+function update(){
+  S.Vk=+document.getElementById('sVk').value;
+  S.Vm=+document.getElementById('sVm').value;
+  S.Tk=+document.getElementById('sTk').value;
+  S.Tm=+document.getElementById('sTm').value;
+  S.r =+document.getElementById('sr_').value;
+  S.x =+document.getElementById('sx').value;
+  S.bsh=+document.getElementById('sbsh').value;
+  S.a =+document.getElementById('sa').value;
+  S.phi=+document.getElementById('sphi').value;
+
+  setEl('lVk',S.Vk.toFixed(3)); setEl('lVm',S.Vm.toFixed(3));
+  setEl('lTk',S.Tk.toFixed(1)+'°'); setEl('lTm',S.Tm.toFixed(1)+'°');
+  setEl('lr',S.r.toFixed(3)); setEl('lx',S.x.toFixed(3));
+  setEl('lbsh',S.bsh.toFixed(3)); setEl('la',S.a.toFixed(3));
+  setEl('lphi',S.phi.toFixed(1)+'°');
+
+  var R=calc(S.Vk,S.Vm,S.Tk,S.Tm,S.r,S.x,S.bsh,S.a,S.phi);
+  setEl('rPkm',f4(R.Pkm)); setEl('rQkm',f4(R.Qkm));
+  setEl('rPmk',f4(R.Pmk)); setEl('rQmk',f4(R.Qmk));
+  setEl('rPl',f4(R.Pl));   setEl('rQl',f4(R.Ql));
+
+  // Series admittance: y_km = 1/z_km = g_km + jb_km
+  var _d=S.r*S.r+S.x*S.x;
+  var gkm=S.r/_d, bkm=-S.x/_d, rbshkm=S.bsh;
+  setEl('rGkm',f4(gkm)); setEl('rBkm',f4(bkm));
+  setEl('rBshkm',f4(rbshkm));
+
+  updateDiagram(R);
+  drawPdelta();
+  drawBars(R);
+}
+
+function updateDiagram(R){
+  setEl('vkl',S.Vk.toFixed(3)+'∠'+S.Tk.toFixed(1)+'°');
+  setEl('vml',S.Vm.toFixed(3)+'∠'+S.Tm.toFixed(1)+'°');
+
+  // Flow labels — arrows are static SVG with fixed direction; just update the text
+  setEl('plk','Pkm='+f4(R.Pkm)+' p.u.'); setEl('plm','Pmk='+f4(R.Pmk)+' p.u.');
+  setEl('qlk','Qkm='+f4(R.Qkm)+' p.u.'); setEl('qlm','Qmk='+f4(R.Qmk)+' p.u.');
+
+  // Shunt Q arrows  Q_k^sh = -(a·Vk)²·bsh   Q_m^sh = -Vm²·bsh
+  // Positive Q → arrow DOWN (absorbing Q, like an inductor)
+  // Negative Q → arrow UP  (generating Q, like a capacitor)
+  var Qksh=-(S.Vk)*(S.Vk)*S.bsh;
+  var Qmsh=-(S.Vm)*(S.Vm)*S.bsh;
+  // Helper: create SVG tspan with optional attributes
+  var _SN='http://www.w3.org/2000/svg';
+  function _shts(txt,a){var e=document.createElementNS(_SN,'tspan');e.textContent=txt;for(var k in a)e.setAttribute(k,a[k]);return e;}
+  [{id:'sha_k',Q:Qksh,x:160},{id:'sha_m',Q:Qmsh,x:500}].forEach(function(s){
+    var el=document.getElementById(s.id);
+    var lbl=document.getElementById(s.id+'_lbl');
+    if(s.Q===0){
+      el.setAttribute('display','none');
+      lbl.setAttribute('display','none');
+    } else {
+      el.removeAttribute('display');
+      el.setAttribute('x1',s.x); el.setAttribute('x2',s.x);
+      if(s.Q>0){ el.setAttribute('y1',138); el.setAttribute('y2',171); }  // top → bottom (down)
+      else     { el.setAttribute('y1',172); el.setAttribute('y2',139); }  // bottom → top (up)
+      el.setAttribute('marker-end','url(#ap)');
+      el.removeAttribute('marker-start');
+      lbl.removeAttribute('display');
+      // Build math label: Q(jb^sh_km) = value p.u.
+      while(lbl.firstChild) lbl.removeChild(lbl.firstChild);
+      lbl.appendChild(_shts('Q',  {'font-style':'italic'}));
+      lbl.appendChild(_shts('sh',    {'font-style':'italic','dy':'-4','font-size':'6'}));
+      lbl.appendChild(_shts('km',    {'font-style':'italic','dx':'-6','dy':'7', 'font-size':'6'}));
+      lbl.appendChild(_shts(' ',     {'dy':'-3'}));
+      lbl.appendChild(_shts(' = ',{}));
+      lbl.appendChild(_shts(f4(s.Q),{'font-family':'Courier New,monospace','font-weight':'700','font-size':'8','font-style':'normal'}));
+      lbl.appendChild(_shts(' p.u.',{'font-size':'7','font-style':'normal'}));
+    }
+  });
+  // Show/hide shunt groups: transformers have no shunt susceptances
+  var isXfmr=(S.mode==='xfmr');
+  var sgk=document.getElementById('shuntGrpK'), sgm=document.getElementById('shuntGrpM');
+  if(isXfmr){sgk.setAttribute('display','none');sgm.setAttribute('display','none');}
+  else{sgk.removeAttribute('display');sgm.removeAttribute('display');}
+
+  drawBranchElement();
+}
+
+function drawBranchElement(){
+  var g=document.getElementById('branchElement');
+  while(g.firstChild) g.removeChild(g.firstChild);
+  var lineK=document.getElementById('line_k');
+  if(S.mode==='xfmr'){
+    var cy=107, r=17;
+    // Two touching circles — IEC/European transformer symbol
+    // Left circle center at 120, right circle center at 120+2r=154; both at y=107
+    var cxL=120, cxR=cxL+2*r;   // = 154; circles touch at x=137
+    // Shorten left wire to the left edge of the primary circle
+    lineK.setAttribute('x2', cxL-r);   // = 103
+    // Right stub from right edge of secondary circle to impedance box
+    var rightLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+    rightLine.setAttribute('x1',cxR+r); rightLine.setAttribute('y1',cy);
+    rightLine.setAttribute('x2',248);   rightLine.setAttribute('y2',cy);
+    rightLine.setAttribute('stroke','#333'); rightLine.setAttribute('stroke-width','2');
+    g.appendChild(rightLine);
+    // Primary winding circle (white fill covers the wire behind it)
+    var NS='http://www.w3.org/2000/svg';
+    var c1=document.createElementNS(NS,'circle');
+    c1.setAttribute('cx',cxL); c1.setAttribute('cy',cy); c1.setAttribute('r',r);
+    c1.setAttribute('fill','white'); c1.setAttribute('stroke','#444'); c1.setAttribute('stroke-width','1.8');
+    g.appendChild(c1);
+    // Secondary winding circle
+    var c2=document.createElementNS(NS,'circle');
+    c2.setAttribute('cx',cxR); c2.setAttribute('cy',cy); c2.setAttribute('r',r);
+    c2.setAttribute('fill','white'); c2.setAttribute('stroke','#444'); c2.setAttribute('stroke-width','1.8');
+    g.appendChild(c2);
+    // Label "1:t = 1:a·e^{jφ}" — italic variables, middle dot, superscript exponent
+    var t=document.createElementNS(NS,'text');
+    t.setAttribute('x',(cxL+cxR)/2); t.setAttribute('y',cy+r+13);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','10');
+    t.setAttribute('fill','#555'); t.setAttribute('font-family','Georgia,serif');
+    // Build tspan sequence: normal/italic toggling, superscript for jφ
+    [
+      {txt:'1:'},
+      {txt:'t',             fi:true},
+      {txt:' = 1:'},
+      {txt:'(a',             fi:true},
+      {txt:'·'},                                    // · middle dot
+      {txt:'e',             fi:true},
+      {txt:' jφ',      fi:true, dy:'-4', sz:'7'},   // superscript jφ
+      {txt:')',                       dy:'+4'}             // restore baseline
+    ].forEach(function(p){
+      var s=document.createElementNS(NS,'tspan');
+      s.textContent=p.txt;
+      if(p.fi) s.setAttribute('font-style','italic');
+      if(p.dy) s.setAttribute('dy',p.dy);
+      if(p.sz) s.setAttribute('font-size',p.sz);
+      t.appendChild(s);
+    });
+    g.appendChild(t);
+  } else {
+    lineK.setAttribute('x2',248);
+  }
+}
+
+function drawPdelta(){
+  var cv=document.getElementById('cvP');
+  var W=cv.clientWidth||400, H=200;
+  cv.width=W; cv.height=H;
+  var c=cv.getContext('2d');
+  c.clearRect(0,0,W,H);
+  var PL={t:18,b:38,l:46,r:12};
+  var cw=W-PL.l-PL.r, ch=H-PL.t-PL.b;
+  var N=300, pkms=[], pmks=[];
+  for(var i=0;i<=N;i++){
+    var tkm=-90+180*i/N;
+    var R2=calc(S.Vk,S.Vm,S.Tm+tkm,S.Tm,S.r,S.x,S.bsh,S.a,S.phi);
+    pkms.push(R2.Pkm); pmks.push(R2.Pmk);
+  }
+  var all=pkms.concat(pmks);
+  var yMn=Math.min(-0.2,Math.min.apply(null,all));
+  var yMx=Math.max(0.2,Math.max.apply(null,all));
+  var yR=yMx-yMn||1;
+  function px(i){return PL.l+cw*i/N;}
+  function py(v){return PL.t+ch*(1-(v-yMn)/yR);}
+  // grid
+  c.strokeStyle='#e5e0d5'; c.lineWidth=.8;
+  var step=(yR>3)?1:(yR>1.5)?0.5:0.25;
+  for(var v=Math.ceil(yMn/step)*step;v<=yMx;v+=step){
+    c.beginPath();c.moveTo(PL.l,py(v));c.lineTo(PL.l+cw,py(v));c.stroke();
+    c.fillStyle='#000000';c.font='9px Arial';c.textAlign='right';
+    c.fillText(v.toFixed(step<1?1:0),PL.l-3,py(v)+3);
+  }
+  // zero
+  c.strokeStyle='#bbb';c.lineWidth=1;
+  c.beginPath();c.moveTo(PL.l,py(0));c.lineTo(PL.l+cw,py(0));c.stroke();
+  // x labels
+  c.fillStyle='#000000';c.font='9px Arial';c.textAlign='center';
+  [-90,-60,-30,0,30,60,90].forEach(function(d){
+    var xi=(d+90)/180;c.fillText(d+'°',PL.l+cw*xi,H-PL.b+12);
+  });
+  c.fillText('Angular Difference (deg)',PL.l+cw/2,H-3);
+  // Pkm
+  c.beginPath();c.strokeStyle='#9671bd';c.lineWidth=2;
+  pkms.forEach(function(v,i){i===0?c.moveTo(px(i),py(v)):c.lineTo(px(i),py(v));});
+  c.stroke();
+  // Pmk
+  c.beginPath();c.strokeStyle='#77b5b6';c.lineWidth=1.5;c.setLineDash([5,3]);
+  pmks.forEach(function(v,i){i===0?c.moveTo(px(i),py(v)):c.lineTo(px(i),py(v));});
+  c.stroke();c.setLineDash([]);
+  // operating point
+  var ci=Math.round((S.Tk-S.Tm+90)/180*N);
+  if(ci>=0&&ci<=N){
+    c.fillStyle='#9671bd';c.beginPath();c.arc(px(ci),py(pkms[ci]),5,0,2*Math.PI);c.fill();
+    c.fillStyle='#77b5b6';c.beginPath();c.arc(px(ci),py(pmks[ci]),4,0,2*Math.PI);c.fill();
+  }
+  // legend — top center
+  c.font='15px Arial'; c.textAlign='left';
+  var swW=16, swH=3, swGap=5, itemSep=18;
+  var tw1=c.measureText('Pkm').width, tw2=c.measureText('Pmk').width;
+  var i1W=swW+swGap+tw1, totalLegW=i1W+itemSep+swW+swGap+tw2;
+  var lx=PL.l+(cw-totalLegW)/2, ly=PL.t+3;
+  c.fillStyle='#9671bd'; c.fillRect(lx,ly,swW,swH); c.fillText('Pkm',lx+swW+swGap,ly+swH+4);
+  c.fillStyle='#77b5b6'; c.fillRect(lx+i1W+itemSep,ly,swW,swH); c.fillText('Pmk',lx+i1W+itemSep+swW+swGap,ly+swH+4);
+}
+
+function drawSubBar(cvId, title, lbls, vals, cols, posOnly){
+  var cv=document.getElementById(cvId);
+  var W=cv.clientWidth||200, H=cv.clientHeight||90;
+  cv.width=W; cv.height=H;
+  var c=cv.getContext('2d');
+  c.clearRect(0,0,W,H);
+  // left/right margins only — no space needed for left-side labels anymore
+  var PL={t:30,b:22,l:18,r:10};
+  var cw=W-PL.l-PL.r, ch=H-PL.t-PL.b;
+  var n=vals.length;
+  var amax=Math.max(0.001,Math.max.apply(null,vals.map(Math.abs)));
+  var origin=posOnly?PL.l:(PL.l+cw/2);
+  var hw=posOnly?cw:(cw/2);
+
+  // ── title + units ─────────────────────────────────────
+  c.fillStyle='#5c5648';c.font='bold 15px Arial';c.textAlign='left';
+  c.fillText(title+' [p.u.]',4,13);
+
+  // ── legend — centered at top, swatch + label per item ─
+  var swSz=10, swGap=3, itemSep=30;
+  c.font='9px Arial';
+  var itemWidths=lbls.map(function(l){return swSz+swGap+c.measureText(l).width;});
+  var totalLegW=itemWidths.reduce(function(a,b){return a+b;},0)+(n-1)*itemSep;
+  var lx=(W-totalLegW)/2;
+  lbls.forEach(function(lbl,i){
+    c.fillStyle=cols[i];c.globalAlpha=0.88;
+    c.fillRect(lx,16,swSz,swSz);
+    c.globalAlpha=1;
+    c.fillStyle='#333';c.font='15px Arial';c.textAlign='left';
+    c.fillText(lbl,lx+swSz+swGap,25);
+    lx+=itemWidths[i]+itemSep;
+  });
+
+  // ── grid + tick labels ────────────────────────────────
+  var dec=amax<0.05?4:amax<0.5?3:amax<5?2:1;
+  var ticks=posOnly?[0,0.25,0.5,0.75,1]:[-1,-0.5,0,0.5,1];
+  ticks.forEach(function(f){
+    var xp=origin+f*hw;
+    c.strokeStyle='#e5e0d5';c.lineWidth=0.7;
+    c.beginPath();c.moveTo(xp,PL.t);c.lineTo(xp,PL.t+ch);c.stroke();
+    c.fillStyle='#111';c.font='12px Arial';c.textAlign='center';
+    c.fillText((f*amax).toFixed(dec),xp,H-PL.b+10);
+  });
+
+  // ── origin / zero line ────────────────────────────────
+  c.strokeStyle='#aaa';c.lineWidth=1;
+  c.beginPath();c.moveTo(origin,PL.t);c.lineTo(origin,PL.t+ch);c.stroke();
+
+  // ── bars — each bar preceded by its value label above ─
+  // Reserve valH px above every bar so the value label never overlaps the bar
+  var valH=10, barGap=n>1?4:0;
+  var bh=Math.min((ch-n*valH-(n-1)*barGap)/n, 18);
+  var totalBarH=n*(bh+valH)+(n-1)*barGap;
+  var sy=PL.t+(ch-totalBarH)/2;
+  vals.forEach(function(v,i){
+    var barTop=sy+i*(bh+valH+barGap)+valH;   // bar starts after its reserved value row
+    var bw=Math.abs(v)/amax*hw;
+    c.fillStyle=cols[i];c.globalAlpha=0.88;
+    if(posOnly||v>=0) c.fillRect(origin,barTop,bw,bh);
+    else c.fillRect(origin-bw,barTop,bw,bh);
+    c.globalAlpha=1;
+    // value centered horizontally over the bar, just above it
+    var barCx=posOnly?(origin+bw/2):(v>=0?origin+bw/2:origin-bw/2);
+    c.fillStyle='#111';c.font='bold 15px Courier New';c.textAlign='center';
+    c.fillText(f4(v),barCx,barTop-6);
+  });
+}
+
+function drawBars(R){
+  drawSubBar('cvB1','Active power',   ['Pkm','Pmk'], [R.Pkm,R.Pmk], ['#69beef','#c44e52'], false);
+  drawSubBar('cvB2','Reactive power', ['Qkm','Qmk'], [R.Qkm,R.Qmk], ['#509047','#ad7032'], false);
+  drawSubBar('cvB3','P losses',       ['Ploss'],      [R.Pl],         ['#8c6bb1'],           true);
+  drawSubBar('cvB4','Q losses',       ['Qloss'],      [R.Ql],         ['#7f7c87'],           false);
+}
+
+function setPreset(type){
+  S.mode=type;
+  document.querySelectorAll('.pb').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('pb_'+type).classList.add('active');
+  function lock(id,v,d){var e=document.getElementById(id);e.value=v;e.disabled=d;}
+  if(type==='line'){
+    lock('sa',1.0,true); lock('sphi',0,true);
+    lock('sr_',0.02,false); lock('sx',0.10,false); lock('sbsh',0.01,false);
+  } else {
+    // Transformer: tap ratio and phase shift both free; shunt susceptance fixed to zero
+    lock('sbsh',0,true);
+    lock('sa',1.05,false); lock('sphi',0,false);
+    lock('sr_',0.005,false); lock('sx',0.08,false);
+  }
+  update();
+}
+
+window.addEventListener('load',update);
+window.addEventListener('resize',function(){
+  var R=calc(S.Vk,S.Vm,S.Tk,S.Tm,S.r,S.x,S.bsh,S.a,S.phi);
+  drawPdelta(); drawBars(R);
+});
+</script>
+</body>
+</html>
