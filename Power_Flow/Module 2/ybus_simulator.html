@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ybus Admittance Matrix Simulator</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --bg-color: #f4f6f9;
+            --container-bg: #ffffff;
+            --border-color: #e0e6ed;
+            --text-color: #333333;
+            --error-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--container-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .settings-bar {
+            background: #e8f0fe;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: var(--container-bg);
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button.remove-btn {
+            background-color: var(--error-color);
+            padding: 6px 10px;
+            font-size: 0.9em;
+        }
+
+        button.remove-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .action-area {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .action-area button {
+            font-size: 1.2em;
+            padding: 15px 40px;
+            background-color: #27ae60;
+        }
+
+        .action-area button:hover {
+            background-color: #2ecc71;
+        }
+
+        #output-matrix {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .matrix-table td {
+            font-family: monospace;
+            font-size: 1.1em;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Power System Admittance Matrix Simulator</h1>
+    <p>Enter the branch and bus parameters below. The simulator will automatically calculate the complex admittance matrix. All impedance and admittance values should be in per unit (pu). Phase shifts should be in degrees.</p>
+
+    <div class="settings-bar">
+        <label for="tap-config"><strong>Transformer Tap Configuration:</strong></label>
+        <select id="tap-config">
+            <option value="1_to_t">1 : t (Standard)</option>
+            <option value="t_to_1">t : 1 (Inverted)</option>
+        </select>
+        <span><em>* Reference side is the "From Bus".</em></span>
+    </div>
+
+    <h2>Branch Parameters</h2>
+    <table id="branch-table">
+        <thead>
+            <tr>
+                <th>Branch ID</th>
+                <th>From Bus</th>
+                <th>To Bus</th>
+                <th>R (pu)</th>
+                <th>X (pu)</th>
+                <th>B total (pu)</th>
+                <th>Tap Ratio (a)</th>
+                <th>Phase Shift (deg)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td><input type="number" value="1" min="1" class="from-bus"></td>
+                <td><input type="number" value="2" min="1" class="to-bus"></td>
+                <td><input type="number" value="0.02" step="0.001" class="r-val"></td>
+                <td><input type="number" value="0.04" step="0.001" class="x-val"></td>
+                <td><input type="number" value="0.0" step="0.001" class="b-val"></td>
+                <td><input type="number" value="1.0" step="0.01" class="tap-val"></td>
+                <td><input type="number" value="0.0" step="0.1" class="shift-val"></td>
+                <td><button class="remove-btn" onclick="removeRow(this)">Remove</button></td>
+            </tr>
+        </tbody>
+    </table>
+    <button onclick="addBranchRow()">+ Add Branch</button>
+
+    <h2>Bus Parameters (Shunt Elements)</h2>
+    <table id="bus-table">
+        <thead>
+            <tr>
+                <th>Bus ID</th>
+                <th>Shunt Susceptance, B_sh (pu)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="number" value="1" min="1" class="bus-id"></td>
+                <td><input type="number" value="0.0" step="0.001" class="bsh-val"></td>
+                <td><button class="remove-btn" onclick="removeRow(this)">Remove</button></td>
+            </tr>
+        </tbody>
+    </table>
+    <button onclick="addBusRow()">+ Add Bus</button>
+
+    <div class="action-area">
+        <button onclick="calculateYbus()">Calculate Ybus Matrix</button>
+    </div>
+
+    <h2>Output Admittance Matrix</h2>
+    <div id="output-matrix">
+        <p style="color: #7f8c8d; font-style: italic;">The calculated matrix will appear here.</p>
+    </div>
+</div>
+
+<script>
+    // --- Complex Number Class ---
+    class Complex {
+        constructor(re, im) {
+            this.re = re;
+            this.im = im;
+        }
+        add(c) {
+            return new Complex(this.re + c.re, this.im + c.im);
+        }
+        sub(c) {
+            return new Complex(this.re - c.re, this.im - c.im);
+        }
+        mul(c) {
+            return new Complex(
+                this.re * c.re - this.im * c.im, 
+                this.re * c.im + this.im * c.re
+            );
+        }
+        mulScalar(s) {
+            return new Complex(this.re * s, this.im * s);
+        }
+        div(c) {
+            let denom = c.re * c.re + c.im * c.im;
+            if (denom === 0) throw new Error("Division by zero in complex numbers.");
+            return new Complex(
+                (this.re * c.re + this.im * c.im) / denom,
+                (this.im * c.re - this.re * c.im) / denom
+            );
+        }
+        static fromPolar(r, thetaRad) {
+            return new Complex(r * Math.cos(thetaRad), r * Math.sin(thetaRad));
+        }
+        toString() {
+            let reStr = this.re.toFixed(4);
+            let imStr = Math.abs(this.im).toFixed(4);
+            let sign = this.im < 0 ? "-" : "+";
+            return `${reStr} ${sign} j${imStr}`;
+        }
+    }
+
+    // --- UI Interaction Logic ---
+    let branchIdCounter = 2;
+
+    function addBranchRow() {
+        const tbody = document.querySelector("#branch-table tbody");
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${branchIdCounter++}</td>
+            <td><input type="number" value="1" min="1" class="from-bus"></td>
+            <td><input type="number" value="2" min="1" class="to-bus"></td>
+            <td><input type="number" value="0.0" step="0.001" class="r-val"></td>
+            <td><input type="number" value="0.1" step="0.001" class="x-val"></td>
+            <td><input type="number" value="0.0" step="0.001" class="b-val"></td>
+            <td><input type="number" value="1.0" step="0.01" class="tap-val"></td>
+            <td><input type="number" value="0.0" step="0.1" class="shift-val"></td>
+            <td><button class="remove-btn" onclick="removeRow(this)">Remove</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function addBusRow() {
+        const tbody = document.querySelector("#bus-table tbody");
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td><input type="number" value="2" min="1" class="bus-id"></td>
+            <td><input type="number" value="0.0" step="0.001" class="bsh-val"></td>
+            <td><button class="remove-btn" onclick="removeRow(this)">Remove</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function removeRow(btn) {
+        btn.closest("tr").remove();
+    }
+
+    // --- Core Ybus Calculation Algorithm ---
+    function calculateYbus() {
+        try {
+            const tapConfig = document.getElementById("tap-config").value;
+            let maxBus = 0;
+            
+            // 1. Parse Branch Data and find Max Bus
+            const branches = [];
+            document.querySelectorAll("#branch-table tbody tr").forEach(row => {
+                let k = parseInt(row.querySelector(".from-bus").value);
+                let m = parseInt(row.querySelector(".to-bus").value);
+                
+                if (k > maxBus) maxBus = k;
+                if (m > maxBus) maxBus = m;
+
+                branches.push({
+                    k: k,
+                    m: m,
+                    r: parseFloat(row.querySelector(".r-val").value),
+                    x: parseFloat(row.querySelector(".x-val").value),
+                    b: parseFloat(row.querySelector(".b-val").value),
+                    a: parseFloat(row.querySelector(".tap-val").value),
+                    shift: parseFloat(row.querySelector(".shift-val").value)
+                });
+            });
+
+            // 2. Parse Bus Data and update Max Bus
+            const buses = [];
+            document.querySelectorAll("#bus-table tbody tr").forEach(row => {
+                let id = parseInt(row.querySelector(".bus-id").value);
+                if (id > maxBus) maxBus = id;
+                
+                buses.push({
+                    id: id,
+                    bsh: parseFloat(row.querySelector(".bsh-val").value)
+                });
+            });
+
+            if (maxBus === 0) {
+                alert("Please add at least one branch or bus.");
+                return;
+            }
+
+            // 3. Initialize Ybus NxN Matrix with zeros
+            let Ybus = Array(maxBus).fill().map(() => Array(maxBus).fill().map(() => new Complex(0, 0)));
+
+            // 4. Calculate based on Julia Example
+            for (let i = 0; i < branches.length; i++) {
+                let br = branches[i];
+                
+                // Adjust to 0-based index for arrays
+                let k = br.k - 1; 
+                let m = br.m - 1;
+
+                // Series admittance: ykm = 1 / (r + jx)
+                let zkm = new Complex(br.r, br.x);
+                let ykm = (new Complex(1, 0)).div(zkm);
+
+                // Shunt admittance: bkm_sh = b_total / 2
+                let bkm_sh = br.b / 2.0;
+
+                // Apply Tap Logic (1:t vs t:1)
+                let a = br.a;
+                let phi_deg = br.shift;
+
+                if (tapConfig === "t_to_1") {
+                    if (a === 0) throw new Error("Tap ratio 'a' cannot be zero.");
+                    a = 1.0 / br.a;        // Invert tap
+                    phi_deg = -br.shift;   // Flip phase shift sign
+                }
+
+                let phi_rad = phi_deg * Math.PI / 180.0;
+
+                // Ybus[k,k] = Ybus[k,k] + ((a^2) * ykm) + j(bkm_sh)
+                let ykk_add = ykm.mulScalar(Math.pow(a, 2)).add(new Complex(0, bkm_sh));
+                Ybus[k][k] = Ybus[k][k].add(ykk_add);
+
+                // Ybus[k,m] = Ybus[k,m] - (a * ykm * exp(-j*phi))
+                let exp_minus = Complex.fromPolar(1, -phi_rad);
+                let ykm_sub = ykm.mulScalar(a).mul(exp_minus);
+                Ybus[k][m] = Ybus[k][m].sub(ykm_sub);
+
+                // Ybus[m,k] = Ybus[m,k] - (a * ykm * exp(+j*phi))
+                let exp_plus = Complex.fromPolar(1, phi_rad);
+                let ymk_sub = ykm.mulScalar(a).mul(exp_plus);
+                Ybus[m][k] = Ybus[m][k].sub(ymk_sub);
+
+                // Ybus[m,m] = Ybus[m,m] + ykm + j(bkm_sh)
+                let ymm_add = ykm.add(new Complex(0, bkm_sh));
+                Ybus[m][m] = Ybus[m][m].add(ymm_add);
+            }
+
+            // 5. Include Shunt Reactive Components from Buses
+            for (let i = 0; i < buses.length; i++) {
+                let id = buses[i].id - 1; // 0-based index
+                let bsh = buses[i].bsh;
+                Ybus[id][id] = Ybus[id][id].add(new Complex(0, bsh));
+            }
+
+            renderOutput(Ybus, maxBus);
+
+        } catch (error) {
+            alert("Error in calculation: " + error.message);
+        }
+    }
+
+    // --- Render Output Table ---
+    function renderOutput(Ybus, N) {
+        let outDiv = document.getElementById("output-matrix");
+        
+        let tableHTML = `<table class="matrix-table"><thead><tr><th>Bus</th>`;
+        for (let i = 1; i <= N; i++) {
+            tableHTML += `<th>${i}</th>`;
+        }
+        tableHTML += `</tr></thead><tbody>`;
+
+        for (let i = 0; i < N; i++) {
+            tableHTML += `<tr><th>${i + 1}</th>`;
+            for (let j = 0; j < N; j++) {
+                tableHTML += `<td>${Ybus[i][j].toString()}</td>`;
+            }
+            tableHTML += `</tr>`;
+        }
+        tableHTML += `</tbody></table>`;
+        outDiv.innerHTML = tableHTML;
+    }
+</script>
+
+</body>
+</html>
