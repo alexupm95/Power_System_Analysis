@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three-Phase Synchronous Generator Simulator</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --panel: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --phaseA: #ef4444; /* Red */
+            --phaseB: #3b82f6; /* Blue */
+            --phaseC: #10b981; /* Green */
+            --netB: #8b5cf6;   /* Purple */
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
+        
+        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { font-size: 1.2rem; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.9rem; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .val-display { float: right; font-weight: normal; color: #64748b; }
+        
+        .btn { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; transition: background 0.2s; }
+        .btn:hover { background: #2563eb; }
+        .btn.paused { background: #ef4444; }
+        
+        .visual-area { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .generator-container, .phasor-container { text-align: center; position: relative; }
+        svg { width: 100%; max-width: 350px; height: auto; border: 1px solid var(--border); border-radius: 50%; background: #fff; }
+        
+        .waveform-container { width: 100%; margin-top: 20px; }
+        canvas { width: 100%; height: 250px; background: #fff; border: 1px solid var(--border); border-radius: 8px; }
+        
+        .legend { display: flex; justify-content: center; gap: 15px; margin-top: 10px; font-size: 0.9rem; font-weight: bold; }
+        .leg-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        
+        .edu-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; font-size: 0.95rem; line-height: 1.5; margin-top: 15px; }
+        
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+            .visual-area { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Three-Phase Synchronous Generator Simulator</h1>
+        <p>Interactive visualization of rotating magnetic fields, phase voltages, and mechanical-electrical relationships.</p>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="panel">
+                <h2>Controls</h2>
+                <div class="control-group">
+                    <button id="btn-toggle" class="btn">Pause Simulation</button>
+                </div>
+                <div class="control-group">
+                    <label>Rotor Speed (RPM) <span class="val-display" id="val-rpm">1800</span></label>
+                    <input type="range" id="slider-rpm" min="0" max="3600" step="100" value="1800">
+                </div>
+                <div class="control-group">
+                    <label>Number of Poles <span class="val-display" id="val-poles">4</span></label>
+                    <input type="range" id="slider-poles" min="2" max="4" step="2" value="4">
+                </div>
+                <div class="control-group">
+                    <label>Electrical Load (%) <span class="val-display" id="val-load">50</span></label>
+                    <input type="range" id="slider-load" min="0" max="100" step="5" value="50">
+                </div>
+                <div class="control-group">
+                    <label>Show Magnetic Field Vectors</label>
+                    <input type="checkbox" id="check-vectors" checked>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Educational Physics</h2>
+                <div class="edu-box">
+                    <strong>Frequency Calculation:</strong><br>
+                    <span id="edu-freq">With a speed of 1800 RPM and 4 poles, the generated electrical frequency is exactly 60.0 Hz.</span>
+                </div>
+                <div class="edu-box">
+                    <strong>Mechanical vs Electrical:</strong><br>
+                    <span id="edu-angle">Because this is a 4-pole machine, one mechanical revolution creates 2 full electrical cycles.</span>
+                </div>
+                <div class="edu-box">
+                    <strong>Magnetic Flux:</strong><br>
+                    As the rotor's magnetic poles sweep past the fixed stator coils spaced 120° apart physically, they induce voltages separated by 120° in time.
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="visual-area">
+                <div class="panel generator-container">
+                    <h2>Machine Cross-Section</h2>
+                    <svg id="gen-svg" viewBox="0 0 400 400">
+                        <circle cx="200" cy="200" r="180" fill="none" stroke="#cbd5e1" stroke-width="20"/>
+                        <circle cx="370" cy="200" r="15" fill="var(--phaseA)"/>
+                        <circle cx="30" cy="200" r="15" fill="var(--phaseA)"/>
+                        <text x="365" y="205" fill="white" font-size="14" font-weight="bold">A</text>
+                        <circle cx="115" cy="347" r="15" fill="var(--phaseB)"/>
+                        <circle cx="285" cy="53" r="15" fill="var(--phaseB)"/>
+                        <text x="110" y="352" fill="white" font-size="14" font-weight="bold">B</text>
+                        <circle cx="115" cy="53" r="15" fill="var(--phaseC)"/>
+                        <circle cx="285" cy="347" r="15" fill="var(--phaseC)"/>
+                        <text x="110" y="58" fill="white" font-size="14" font-weight="bold">C</text>
+
+                        <g id="rotor">
+                            <circle cx="200" cy="200" r="130" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+                            <g id="rotor-2p" style="display: none;">
+                                <path d="M 200,70 L 330,200 L 200,330 L 70,200 Z" fill="#e2e8f0"/>
+                                <rect x="200" y="80" width="100" height="240" fill="#ef4444" transform="rotate(90 200 200)" rx="10"/>
+                                <rect x="100" y="80" width="100" height="240" fill="#3b82f6" transform="rotate(90 200 200)" rx="10"/>
+                                <text x="300" y="206" fill="white" font-weight="bold" font-size="20">N</text>
+                                <text x="80" y="206" fill="white" font-weight="bold" font-size="20">S</text>
+                            </g>
+                            <g id="rotor-4p">
+                                <path d="M 200,70 L 330,200 L 200,330 L 70,200 Z" fill="#e2e8f0"/>
+                                <polygon points="200,200 320,150 330,200 320,250" fill="#ef4444"/>
+                                <polygon points="200,200 80,150 70,200 80,250" fill="#ef4444"/>
+                                <polygon points="200,200 150,80 200,70 250,80" fill="#3b82f6"/>
+                                <polygon points="200,200 150,320 200,330 250,320" fill="#3b82f6"/>
+                                <text x="300" y="205" fill="white" font-weight="bold" font-size="16">N</text>
+                                <text x="85" y="205" fill="white" font-weight="bold" font-size="16">N</text>
+                                <text x="195" y="95" fill="white" font-weight="bold" font-size="16">S</text>
+                                <text x="195" y="320" fill="white" font-weight="bold" font-size="16">S</text>
+                            </g>
+                            <circle cx="200" cy="200" r="15" fill="#333"/>
+                        </g>
+
+                        <g id="mag-vectors">
+                            <line id="vec-a" x1="200" y1="200" x2="200" y2="200" stroke="var(--phaseA)" stroke-width="3" stroke-dasharray="5,5"/>
+                            <line id="vec-b" x1="200" y1="200" x2="200" y2="200" stroke="var(--phaseB)" stroke-width="3" stroke-dasharray="5,5"/>
+                            <line id="vec-c" x1="200" y1="200" x2="200" y2="200" stroke="var(--phaseC)" stroke-width="3" stroke-dasharray="5,5"/>
+                            <line id="vec-net" x1="200" y1="200" x2="200" y2="200" stroke="var(--netB)" stroke-width="5" marker-end="url(#arrow)"/>
+                        </g>
+                        
+                        <defs>
+                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="var(--netB)" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+
+                <div class="panel phasor-container">
+                    <h2>Voltage & Current Phasors</h2>
+                    <svg id="phasor-svg" viewBox="0 0 400 400">
+                        <circle cx="200" cy="200" r="150" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="10,10"/>
+                        <circle cx="200" cy="200" r="100" fill="none" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="5,5"/>
+                        <line x1="200" y1="20" x2="200" y2="380" stroke="#cbd5e1" stroke-width="1"/>
+                        <line x1="20" y1="200" x2="380" y2="200" stroke="#cbd5e1" stroke-width="1"/>
+                        
+                        <g stroke-width="4">
+                            <line id="ph-va" x1="200" y1="200" x2="350" y2="200" stroke="var(--phaseA)"/>
+                            <line id="ph-vb" x1="200" y1="200" x2="125" y2="330" stroke="var(--phaseB)"/>
+                            <line id="ph-vc" x1="200" y1="200" x2="125" y2="70" stroke="var(--phaseC)"/>
+                        </g>
+                        <g stroke-width="2" stroke-dasharray="4,4">
+                            <line id="ph-ia" x1="200" y1="200" x2="275" y2="200" stroke="var(--phaseA)"/>
+                            <line id="ph-ib" x1="200" y1="200" x2="162" y2="265" stroke="var(--phaseB)"/>
+                            <line id="ph-ic" x1="200" y1="200" x2="162" y2="135" stroke="var(--phaseC)"/>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="panel waveform-container">
+                <h2>Real-Time Waveforms (Voltage - Solid, Current - Dashed)</h2>
+                <canvas id="wave-canvas"></canvas>
+                <div class="legend">
+                    <div class="leg-item"><div class="dot" style="background: var(--phaseA);"></div> Phase A</div>
+                    <div class="leg-item"><div class="dot" style="background: var(--phaseB);"></div> Phase B</div>
+                    <div class="leg-item"><div class="dot" style="background: var(--phaseC);"></div> Phase C</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Variables
+        let isRunning = true;
+        let rpm = 1800;
+        let poles = 4;
+        let loadPercent = 50;
+        let showVectors = true;
+        
+        // Physics / Math Variables
+        let time = 0; 
+        let history = []; // To store waveform points
+        const historyLength = 400; // number of points to keep
+        const dt = 0.005; // fixed time step for stable integration
+        
+        // DOM Elements
+        const elRotor = document.getElementById('rotor');
+        const elRotor2p = document.getElementById('rotor-2p');
+        const elRotor4p = document.getElementById('rotor-4p');
+        const waveCanvas = document.getElementById('wave-canvas');
+        const ctx = waveCanvas.getContext('2d');
+        
+        // Vector lines
+        const vecA = document.getElementById('vec-a');
+        const vecB = document.getElementById('vec-b');
+        const vecC = document.getElementById('vec-c');
+        const vecNet = document.getElementById('vec-net');
+        const vecGroup = document.getElementById('mag-vectors');
+        
+        // Phasor lines
+        const phVa = document.getElementById('ph-va');
+        const phVb = document.getElementById('ph-vb');
+        const phVc = document.getElementById('ph-vc');
+        const phIa = document.getElementById('ph-ia');
+        const phIb = document.getElementById('ph-ib');
+        const phIc = document.getElementById('ph-ic');
+        
+        // Event Listeners
+        document.getElementById('btn-toggle').addEventListener('click', (e) => {
+            isRunning = !isRunning;
+            e.target.innerText = isRunning ? "Pause Simulation" : "Resume Simulation";
+            e.target.classList.toggle('paused');
+        });
+
+        document.getElementById('slider-rpm').addEventListener('input', (e) => {
+            rpm = parseInt(e.target.value);
+            document.getElementById('val-rpm').innerText = rpm;
+            updateEduPanels();
+        });
+
+        document.getElementById('slider-poles').addEventListener('input', (e) => {
+            poles = parseInt(e.target.value);
+            document.getElementById('val-poles').innerText = poles;
+            elRotor2p.style.display = poles === 2 ? 'block' : 'none';
+            elRotor4p.style.display = poles === 4 ? 'block' : 'none';
+            updateEduPanels();
+        });
+
+        document.getElementById('slider-load').addEventListener('input', (e) => {
+            loadPercent = parseInt(e.target.value);
+            document.getElementById('val-load').innerText = loadPercent;
+        });
+
+        document.getElementById('check-vectors').addEventListener('change', (e) => {
+            showVectors = e.target.checked;
+            vecGroup.style.display = showVectors ? 'block' : 'none';
+        });
+
+        // Resize Canvas correctly
+        function resizeCanvas() {
+            waveCanvas.width = waveCanvas.parentElement.clientWidth - 40; // padding adjustment
+            waveCanvas.height = 250;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function updateEduPanels() {
+            let freq = (rpm * poles) / 120;
+            document.getElementById('edu-freq').innerHTML = `With a speed of <b>${rpm} RPM</b> and <b>${poles} poles</b>, the generated electrical frequency is <b>${freq.toFixed(1)} Hz</b>. Formula: <i>f = (N × P) / 120</i>.`;
+            document.getElementById('edu-angle').innerHTML = `Because this is a ${poles}-pole machine, one mechanical revolution creates <b>${poles/2}</b> full electrical cycle(s).`;
+        }
+        updateEduPanels();
+
+        // Main Animation Loop
+        let lastTimestamp = 0;
+        function animate(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const delta = (timestamp - lastTimestamp) / 1000; // convert to seconds
+            lastTimestamp = timestamp;
+
+            if (isRunning) {
+                // Scale time artificially for visualization purposes. 
+                // Actual 60Hz is too fast to see. Let's make 1800 RPM visually map to ~1 cycle per second.
+                let visualSpeedScale = 0.05; 
+                time += delta * visualSpeedScale * (rpm / 60);
+                
+                let mechanicalAngle = time * 2 * Math.PI; // in radians
+                let electricalAngle = mechanicalAngle * (poles / 2);
+                
+                // Update Rotor physical position
+                let degMech = mechanicalAngle * (180 / Math.PI);
+                elRotor.setAttribute('transform', `rotate(${degMech} 200 200)`);
+                
+                // Calculate Voltages (V = Vmax * sin(theta_e))
+                let vMax = 100;
+                let va = vMax * Math.sin(electricalAngle);
+                let vb = vMax * Math.sin(electricalAngle - (2 * Math.PI / 3));
+                let vc = vMax * Math.sin(electricalAngle + (2 * Math.PI / 3));
+
+                // Calculate Currents (I = load * V) - Assuming resistive load for simple phase alignment
+                let iMax = (loadPercent / 100) * 60;
+                let ia = iMax * Math.sin(electricalAngle);
+                let ib = iMax * Math.sin(electricalAngle - (2 * Math.PI / 3));
+                let ic = iMax * Math.sin(electricalAngle + (2 * Math.PI / 3));
+
+                // Store history for waveforms
+                history.push({va, vb, vc, ia, ib, ic});
+                if (history.length > historyLength) {
+                    history.shift();
+                }
+
+                drawWaveforms();
+                updatePhasors(electricalAngle, vMax, iMax);
+                updateMagVectors(electricalAngle);
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function updatePhasors(thetaE, vMax, iMax) {
+            let cx = 200, cy = 200;
+            // Map electrical angle to phasor rotation
+            let angA = thetaE;
+            let angB = thetaE - (2 * Math.PI / 3);
+            let angC = thetaE + (2 * Math.PI / 3);
+
+            // Voltage Phasors (length 150)
+            let vLen = 150;
+            phVa.setAttribute('x2', cx + vLen * Math.cos(angA)); phVa.setAttribute('y2', cy - vLen * Math.sin(angA));
+            phVb.setAttribute('x2', cx + vLen * Math.cos(angB)); phVb.setAttribute('y2', cy - vLen * Math.sin(angB));
+            phVc.setAttribute('x2', cx + vLen * Math.cos(angC)); phVc.setAttribute('y2', cy - vLen * Math.sin(angC));
+
+            // Current Phasors
+            let iLen = iMax * 1.5; // scale for visibility
+            phIa.setAttribute('x2', cx + iLen * Math.cos(angA)); phIa.setAttribute('y2', cy - iLen * Math.sin(angA));
+            phIb.setAttribute('x2', cx + iLen * Math.cos(angB)); phIb.setAttribute('y2', cy - iLen * Math.sin(angB));
+            phIc.setAttribute('x2', cx + iLen * Math.cos(angC)); phIc.setAttribute('y2', cy - iLen * Math.sin(angC));
+        }
+
+        function updateMagVectors(thetaE) {
+            // Inspired by MATLAB B-field vector addition.
+            let cx = 200, cy = 200;
+            let ba = 60 * Math.sin(thetaE);
+            let bb = 60 * Math.sin(thetaE - 2*Math.PI/3);
+            let bc = 60 * Math.sin(thetaE + 2*Math.PI/3);
+
+            // Stator physical axes (Phase A horizontal, B at 120, C at 240)
+            vecA.setAttribute('x2', cx + ba * Math.cos(0)); vecA.setAttribute('y2', cy - ba * Math.sin(0));
+            vecB.setAttribute('x2', cx + bb * Math.cos(2*Math.PI/3)); vecB.setAttribute('y2', cy - bb * Math.sin(2*Math.PI/3));
+            vecC.setAttribute('x2', cx + bc * Math.cos(-2*Math.PI/3)); vecC.setAttribute('y2', cy - bc * Math.sin(-2*Math.PI/3));
+
+            // Net B field rotates synchronously
+            // Bnet = 1.5 * Bmax. Vector rotates at thetaE.
+            let bNet = 90;
+            vecNet.setAttribute('x2', cx + bNet * Math.cos(thetaE));
+            vecNet.setAttribute('y2', cy - bNet * Math.sin(thetaE));
+        }
+
+        function drawWaveforms() {
+            ctx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+            let w = waveCanvas.width;
+            let h = waveCanvas.height;
+            let cy = h / 2;
+
+            // Draw Grid
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+            ctx.stroke();
+
+            if(history.length === 0) return;
+
+            let step = w / historyLength;
+
+            // Helper to draw a specific wave
+            const drawWave = (key, color, isDashed = false) => {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                if(isDashed) ctx.setLineDash([5, 5]); else ctx.setLineDash([]);
+                
+                for(let i=0; i<history.length; i++) {
+                    let x = i * step;
+                    let y = cy - history[i][key]; // subtract because y is inverted in canvas
+                    if(i===0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            };
+
+            // Currents (Dashed)
+            if(loadPercent > 0) {
+                drawWave('ia', 'rgba(239, 68, 68, 0.5)', true);
+                drawWave('ib', 'rgba(59, 130, 246, 0.5)', true);
+                drawWave('ic', 'rgba(16, 185, 129, 0.5)', true);
+            }
+
+            // Voltages (Solid)
+            drawWave('va', '#ef4444'); // Red
+            drawWave('vb', '#3b82f6'); // Blue
+            drawWave('vc', '#10b981'); // Green
+            
+            ctx.setLineDash([]); // reset
+        }
+
+        // Initialize history with zeros
+        for(let i=0; i<historyLength; i++) {
+            history.push({va:0, vb:0, vc:0, ia:0, ib:0, ic:0});
+        }
+
+        // Start
+        requestAnimationFrame(animate);
+
+    </script>
+</body>
+</html>
