@@ -1,0 +1,26 @@
+True	four-most-important-power-transformer-analyses-.jpg	https://time.learnify.se/learnifyer/ObjectResources/0f99a514-2498-47e9-8756-87e164ff73d3/four-most-important-power-transformer-analyses-.jpg
+True	transformerxxxx.jpg	https://time.learnify.se/learnifyer/ObjectResources/dfa32f7c-a18e-4b29-b136-11b9d17c648e/transformerxxxx.jpg
+True	ideal_transformer.png	https://time.learnify.se/learnifyer/ObjectResources/9f9b86dc-1579-4c41-a4f0-5c4d34ebb936/ideal%20transformer.png
+True	ideal_transformer_scheme.png	https://time.learnify.se/learnifyer/ObjectResources/9f9b86dc-1579-4c41-a4f0-5c4d34ebb936/ideal%20transformer%20scheme.png
+True	edited-image-1766741347170.jpg	https://time.learnify.se/learnifyer/ObjectResources/9f9b86dc-1579-4c41-a4f0-5c4d34ebb936/edited-image-1766741347170.jpg
+True	impedance_in_a_transformer.png	https://time.learnify.se/learnifyer/ObjectResources/14f67a63-e5b9-4eea-beb4-b6cf369f7b48/impedance%20in%20a%20transformer.png
+False	exercise_impedance_transformation.pdf	https://time.learnify.se/learnifyer/ObjectResources/14f67a63-e5b9-4eea-beb4-b6cf369f7b48/exercise impedance transformation.pdf
+True	edited-image-1766746781075.jpg	https://time.learnify.se/learnifyer/ObjectResources/14f67a63-e5b9-4eea-beb4-b6cf369f7b48/edited-image-1766746781075.jpg
+True	dot_initial3.png	https://time.learnify.se/learnifyer/ObjectResources/d1b2bae7-71da-4e52-8a32-c61921decf1f/dot_initial3.png
+True	dot_initial5.png	https://time.learnify.se/learnifyer/ObjectResources/d1b2bae7-71da-4e52-8a32-c61921decf1f/dot_initial5.png
+False	equivalent_circuit_of_a_real_transformer.png	https://time.learnify.se/learnifyer/ObjectResources/c57efa6e-6d38-4079-b48f-b4052ee38058/equivalent%20circuit%20of%20a%20real%20transformer.png
+True	approximate_transformer_model.png	https://time.learnify.se/learnifyer/ObjectResources/3a94a91d-ccf3-46dc-8c98-e087b2805d89/approximate%20transformer%20model.png
+True	inductance_model.png	https://time.learnify.se/learnifyer/ObjectResources/3a94a91d-ccf3-46dc-8c98-e087b2805d89/inductance%20model.png
+True	open_circuit_test.png	https://time.learnify.se/learnifyer/ObjectResources/462eb791-4f64-4aae-aff1-4f7c34f153b8/open%20circuit%20test.png
+True	determining_the_transformer_parameters.png	https://time.learnify.se/learnifyer/ObjectResources/462eb791-4f64-4aae-aff1-4f7c34f153b8/determining%20the%20transformer%20parameters.png
+True	exercise.png	https://time.learnify.se/learnifyer/ObjectResources/462eb791-4f64-4aae-aff1-4f7c34f153b8/exercise.png
+True	series_model.png	https://time.learnify.se/learnifyer/ObjectResources/539ac687-7813-4025-848a-5d0433f4cd3d/series%20model.png
+True	exercise3.png	https://time.learnify.se/learnifyer/ObjectResources/539ac687-7813-4025-848a-5d0433f4cd3d/exercise3.png
+True	exercise4.png	https://time.learnify.se/learnifyer/ObjectResources/539ac687-7813-4025-848a-5d0433f4cd3d/exercise4.png
+True	circuit_series_secondary.png	https://time.learnify.se/learnifyer/ObjectResources/a71cdfe3-8303-47b2-8c2c-45079d5bc65a/circuit%20series%20secondary.png
+True	phasor_lagging.png	https://time.learnify.se/learnifyer/ObjectResources/a71cdfe3-8303-47b2-8c2c-45079d5bc65a/phasor%20lagging.png
+True	phasor_resistive.png	https://time.learnify.se/learnifyer/ObjectResources/a71cdfe3-8303-47b2-8c2c-45079d5bc65a/phasor%20resistive.png
+True	phasor_leading.png	https://time.learnify.se/learnifyer/ObjectResources/a71cdfe3-8303-47b2-8c2c-45079d5bc65a/phasor%20leading.png
+False	complete_step-by-step_exercise_edited.pdf	https://time.learnify.se/learnifyer/ObjectResources/6c868fc9-85b9-47f5-9cbb-8884be2b1958/complete step-by-step exercise edited.pdf
+True	four-most-important-power-transformer-analyses-_2.jpg	https://time.learnify.se/learnifyer/ObjectResources/6c868fc9-85b9-47f5-9cbb-8884be2b1958/four-most-important-power-transformer-analyses-.jpg
+True	conclusions.jpg	https://time.learnify.se/learnifyer/ObjectResources/673966db-d9c5-487b-bcb6-07fb423b8286/conclusions.jpg
